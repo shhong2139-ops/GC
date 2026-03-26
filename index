@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Grand Circle 8Days</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --text: #1a1a2e;
+  --text2: #555770;
+  --text3: #8b8da3;
+  --primary: #4f46e5;
+  --primary-light: #eef2ff;
+  --primary-dark: #3730a3;
+  --accent: #f59e0b;
+  --accent-light: #fffbeb;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --blue-light: #eff6ff;
+  --orange: #ea580c;
+  --orange-light: #fff7ed;
+  --border: rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+@media(prefers-color-scheme:dark){
+  :root {
+    --bg: #0f0f1a; --surface: #1a1a2e; --text: #eaeaf0; --text2: #a0a0b8; --text3: #6b6b85;
+    --primary: #818cf8; --primary-light: #1e1b4b; --primary-dark: #a5b4fc;
+    --accent-light: #2a2005; --danger-light: #2a0a0a; --success-light: #052e16;
+    --blue-light: #0a1628; --orange-light: #1a0f05;
+    --border: rgba(255,255,255,0.06);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2); --shadow: 0 4px 12px rgba(0,0,0,0.3); --shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter','Noto Sans KR',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding-bottom:90px;overflow-x:hidden}
+
+/* Header */
+.header{background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a855f7 100%);color:#fff;padding:32px 20px 24px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:rgba(255,255,255,.08);border-radius:50%}
+.header h1{font-size:1.5rem;font-weight:800;letter-spacing:-.5px;position:relative;z-index:1}
+.header .sub{font-size:.8rem;opacity:.8;margin-top:4px;font-weight:500;position:relative;z-index:1}
+.header .route{font-size:.7rem;opacity:.65;margin-top:12px;line-height:1.7;background:rgba(255,255,255,.1);padding:8px 12px;border-radius:10px;position:relative;z-index:1}
+
+/* Tabs */
+.tabs-wrap{position:sticky;top:0;z-index:100;background:var(--surface);box-shadow:var(--shadow-sm)}
+.tabs{display:flex;overflow-x:auto;padding:8px 12px;gap:6px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--text3);border-radius:24px;cursor:pointer;transition:all .25s;text-align:center;line-height:1.3;border:1.5px solid transparent}
+.tab:hover{background:var(--primary-light);color:var(--primary)}
+.tab.active{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)}
+.tab .dt{font-size:.65rem;font-weight:500;opacity:.7}
+.tab.active .dt{opacity:.9}
+
+/* Panel */
+.day-panel{display:none;padding:16px;max-width:600px;margin:0 auto}
+.day-panel.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Route Map Button */
+.route-btn{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;text-decoration:none;padding:14px 18px;border-radius:var(--radius);margin-bottom:16px;box-shadow:0 4px 14px rgba(16,185,129,.3);transition:transform .15s}
+.route-btn:active{transform:scale(.97)}
+.route-btn .rb-icon{font-size:1.5rem}
+.route-btn .rb-text{flex:1}
+.route-btn .rb-title{font-size:.88rem;font-weight:700}
+.route-btn .rb-sub{font-size:.72rem;opacity:.85;margin-top:1px}
+.route-btn .rb-arrow{font-size:1.2rem;opacity:.7}
+
+/* Weather */
+.weather{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:12px}
+.weather-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;background:var(--blue-light)}
+.weather.cold .weather-icon{background:var(--danger-light)}
+.weather-text{flex:1}
+.weather-temp{font-size:.95rem;font-weight:700}
+.weather-outfit{font-size:.8rem;color:var(--text2);margin-top:2px}
+.weather-warn{font-size:.78rem;color:var(--danger);font-weight:600;margin-top:4px}
+
+/* Section */
+.section{background:var(--surface);border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.section-head{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* Timeline */
+.tl{position:relative;padding-left:28px}
+.tl::before{content:'';position:absolute;left:9px;top:12px;bottom:12px;width:2px;background:linear-gradient(to bottom,var(--primary),rgba(79,70,229,.15));border-radius:2px}
+.tl-item{position:relative;padding-bottom:20px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:'';position:absolute;left:-23px;top:6px;width:10px;height:10px;background:var(--surface);border:2.5px solid var(--primary);border-radius:50%;z-index:1}
+.tl-item.hl::before{width:14px;height:14px;left:-25px;top:4px;background:var(--primary);border-color:var(--primary);box-shadow:0 0 0 4px rgba(79,70,229,.15)}
+/* Meal timeline node */
+.tl-item.meal-node::before{background:var(--success);border-color:var(--success);box-shadow:0 0 0 4px rgba(16,185,129,.12)}
+/* Map stop number */
+.tl-stop{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:.68rem;font-weight:800;margin-right:6px;flex-shrink:0;vertical-align:middle}
+.tl-time{font-size:.72rem;font-weight:700;color:var(--primary);letter-spacing:.3px}
+.tl-time.meal-time{color:var(--success)}
+.tl-desc{font-size:.88rem;margin-top:1px;font-weight:500}
+.tl-note{font-size:.75rem;color:var(--text2);margin-top:2px}
+.tl-warn{display:inline-block;font-size:.72rem;color:var(--danger);font-weight:700;background:var(--danger-light);padding:2px 8px;border-radius:6px;margin-top:4px}
+/* 햇반 badge */
+.pack-badge{display:inline-block;font-size:.65rem;font-weight:700;color:var(--orange);background:var(--orange-light);border:1px solid rgba(234,88,12,.2);padding:2px 8px;border-radius:6px;margin-left:4px}
+
+.nav-btn{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;text-decoration:none;padding:7px 14px;border-radius:20px;font-size:.73rem;font-weight:600;margin-top:6px;margin-right:4px;transition:all .2s;box-shadow:0 2px 6px rgba(79,70,229,.25)}
+.nav-btn:active{transform:scale(.96);opacity:.85}
+
+/* Hotel */
+.hotel{display:flex;align-items:center;gap:12px;background:var(--primary-light);border-radius:var(--radius-sm);padding:14px}
+.hotel-icon{width:40px;height:40px;background:var(--primary);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.hotel-info{flex:1;min-width:0}
+.hotel-name{font-size:.88rem;font-weight:700}
+.hotel-detail{font-size:.75rem;color:var(--text2);margin-top:1px}
+.hotel .nav-btn{margin-top:0;flex-shrink:0}
+
+/* Prep */
+.prep{background:var(--accent-light);border:1.5px solid rgba(245,158,11,.2);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.prep summary{padding:14px 16px;font-weight:700;font-size:.88rem;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;transition:background .2s}
+.prep summary::-webkit-details-marker{display:none}
+.prep summary .arrow{display:inline-block;font-size:.65rem;transition:transform .25s;color:var(--accent)}
+.prep[open] summary .arrow{transform:rotate(90deg)}
+.prep-list{padding:0 16px 14px}
+.prep-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid rgba(245,158,11,.1)}
+.prep-badge{flex-shrink:0;font-size:.65rem;font-weight:700;color:var(--accent);background:rgba(245,158,11,.12);padding:3px 8px;border-radius:6px;min-width:60px;text-align:center;margin-top:1px}
+.prep-item input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;accent-color:var(--accent);border-radius:4px;margin-top:1px}
+.prep-item label{flex:1;font-size:.85rem;font-weight:500;cursor:pointer}
+.prep-item label.done{text-decoration:line-through;color:var(--text3)}
+
+/* Shop */
+.shop{padding:14px 16px}
+.shop-badge{display:inline-block;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:8px;margin-bottom:8px}
+.shop ul{padding-left:18px}
+.shop li{font-size:.83rem;padding:2px 0;color:var(--text2)}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:6px 0;padding-bottom:max(6px,env(safe-area-inset-bottom));z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.bottom-nav button{flex:1;border:none;background:none;padding:8px 4px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text3);font-size:.65rem;font-weight:600;font-family:inherit;transition:color .2s}
+.bottom-nav button .icon{font-size:1.2rem}
+.bottom-nav button.active{color:var(--primary)}
+
+.view{display:none}.view.active{display:block}
+
+/* Map */
+.day-map{height:280px;border-radius:var(--radius);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow);z-index:0;position:relative}
+.day-map .leaflet-control-attribution{font-size:9px}
+.map-marker{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:.75rem;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2.5px solid #fff}
+.map-marker.spot{background:#4f46e5}
+.map-marker.meal{background:#10b981}
+.map-marker.highlight{background:#ef4444;width:32px;height:32px;font-size:.8rem}
+.map-tooltip{font-family:'Inter','Noto Sans KR',sans-serif!important;font-size:.78rem!important;font-weight:600!important;padding:4px 10px!important;border-radius:8px!important;box-shadow:0 2px 8px rgba(0,0,0,.2)!important}
+
+/* Checklist */
+.cl-wrap{padding:16px;max-width:600px;margin:0 auto}
+.cl-cat{font-size:.9rem;font-weight:700;margin:20px 0 10px;padding:8px 14px;background:var(--surface);border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+.cl-items{background:var(--surface);border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow-sm)}
+.cl-item{display:flex;align-items:center;gap:12px;padding:12px 16px;font-size:.85rem;font-weight:500;border-bottom:1px solid var(--border)}
+.cl-item:last-child{border-bottom:none}
+.cl-item input{width:20px;height:20px;accent-color:var(--primary);flex-shrink:0}
+.cl-item label{flex:1;cursor:pointer}
+.cl-item label.done{text-decoration:line-through;color:var(--text3)}
+
+/* Cost */
+.cost-wrap{padding:16px;max-width:600px;margin:0 auto}
+.cost-card{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.cost-row{display:grid;grid-template-columns:1fr auto;padding:14px 16px;border-bottom:1px solid var(--border);gap:8px;align-items:center}
+.cost-row:last-child{border-bottom:none}
+.cost-name{font-size:.85rem;font-weight:600}
+.cost-sub{font-size:.72rem;color:var(--text3)}
+.cost-amount{font-size:.88rem;font-weight:700;text-align:right;color:var(--primary)}
+.cost-total{background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;padding:16px}
+.cost-total .cost-name{color:rgba(255,255,255,.8)}
+.cost-total .cost-amount{color:#fff;font-size:1rem}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Grand Circle</h1>
+  <div class="sub">Mar 28 – Apr 5, 2026 · 8 Days</div>
+  <div class="route">Cary → PHX → Sedona → Grand Canyon → Page → Kanab → Zion → Bryce → Arches → Monument Valley → PHX → Cary</div>
+</div>
+
+<div class="bottom-nav">
+  <button class="active" onclick="switchView('schedule',this)"><span class="icon">📍</span>일정</button>
+  <button onclick="switchView('checklist',this)"><span class="icon">✅</span>준비물</button>
+  <button onclick="switchView('cost',this)"><span class="icon">💰</span>비용</button>
+</div>
+
+<!-- ===== SCHEDULE ===== -->
+<div id="view-schedule" class="view active">
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <div class="tab" data-day="1" data-date="2026-03-28">D1<div class="dt">3/28 토</div></div>
+    <div class="tab" data-day="2" data-date="2026-03-29">D2<div class="dt">3/29 일</div></div>
+    <div class="tab" data-day="3" data-date="2026-03-30">D3<div class="dt">3/30 월</div></div>
+    <div class="tab" data-day="4" data-date="2026-03-31">D4<div class="dt">3/31 화</div></div>
+    <div class="tab" data-day="5" data-date="2026-04-01">D5<div class="dt">4/1 수</div></div>
+    <div class="tab" data-day="6" data-date="2026-04-02">D6<div class="dt">4/2 목</div></div>
+    <div class="tab" data-day="7" data-date="2026-04-03">D7<div class="dt">4/3 금</div></div>
+    <div class="tab" data-day="8" data-date="2026-04-04">D8<div class="dt">4/4 토</div></div>
+    <div class="tab" data-day="9" data-date="2026-04-05">D9<div class="dt">4/5 일</div></div>
+  </div>
+</div>
+
+<!-- ==================== DAY 1 ==================== -->
+<div class="day-panel" data-day="1">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/Phoenix+Sky+Harbor+Airport/Costco+Wholesale+Scottsdale+AZ/Trader+Joe's+Scottsdale+AZ/Airport+Mesa+Trailhead+Sedona+AZ/Cottonwood+AZ" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">PHX → 코스트코 → 트레이더조 → Airport Mesa → Cottonwood</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-1" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">☀️</div>
+    <div class="weather-text">
+      <div class="weather-temp">19 – 24°C</div>
+      <div class="weather-outfit">반팔 + 얇은 겉옷</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 4:00 AM · 아침</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 차에서</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">오전</div>
+        <div class="tl-desc">CLT → PHX 비행</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>12:00 PM</div>
+        <div class="tl-desc">PHX 렌터카 픽업</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Phoenix+Sky+Harbor+Airport+Car+Rental" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍔 12:30 PM · 점심</div>
+        <div class="tl-desc">인앤아웃 버거</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=In-N-Out+Burger+near+Scottsdale+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">B</span>오후</div>
+        <div class="tl-desc">쇼핑 — 코스트코 · 홀푸드 · 트레이더조</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Costco+Wholesale+Scottsdale+AZ" target="_blank">📍 코스트코</a>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">C</span>5:00 PM</div>
+        <div class="tl-desc">🌅 Airport Mesa 선셋 하이킹</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Airport+Mesa+Trailhead+Sedona+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 7:30 PM · 저녁</div>
+        <div class="tl-desc">햇반 <span class="pack-badge">🍱 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">D</span>저녁</div>
+        <div class="tl-desc">Cottonwood 숙소 · 수영 가능</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">Cottonwood (Sedona)</div>
+        <div class="hotel-detail">$96.48 (크레딧 적용) · AMEX · Non-refundable</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Cottonwood+AZ+hotel" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p1-1" onchange="saveCheck(this)">
+        <label for="p1-1">내일점심 도시락 5개 (밥 + 스팸)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p1-2" onchange="saveCheck(this)">
+        <label for="p1-2">내일 그랜드캐년 하이킹 가방: 물, 야채, 과일, 캔디</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p1-3" onchange="saveCheck(this)">
+        <label for="p1-3">🍱 내일 저녁 햇반 챙겨두기</label>
+      </div>
+    </div>
+  </details>
+
+  <div class="section">
+    <div class="section-head">🛒 쇼핑 목록</div>
+    <div class="shop">
+      <div class="shop-badge">코스트코 · 홀푸드 · 트레이더조</div>
+      <ul>
+        <li>작은 생수, 큰 생수</li>
+        <li>사과, 귤, 오이, 상추</li>
+        <li>계란, 김치, 칙폴레 치킨고기</li>
+        <li>코스트코 에너지바, 빵, 와플</li>
+        <li>햇반 50개?</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAY 2 ==================== -->
+<div class="day-panel" data-day="2">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/Cottonwood+AZ/Bell+Rock+Trailhead+Sedona+AZ/Grand+Canyon+South+Rim+Visitor+Center/Yavapai+Lodge+Grand+Canyon" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Cottonwood → Bell Rock → Grand Canyon → Yavapai Lodge</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-2" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">🌤️</div>
+    <div class="weather-text">
+      <div class="weather-temp">오전 15-20°C → 오후 12-18°C → 저녁 5-10°C</div>
+      <div class="weather-outfit">얇은 패딩 필수 · 저녁에 급격히 추워짐</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 8:00 AM · 아침</div>
+        <div class="tl-desc">조식 (숙소)</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>9:00 AM</div>
+        <div class="tl-desc">출발</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">B</span>9:30 AM</div>
+        <div class="tl-desc">Bell Rock</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Bell+Rock+Trailhead+Sedona+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 12:00 PM · 점심</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 차에서</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">C</span>2:00 PM</div>
+        <div class="tl-desc">Grand Canyon Hiking</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Grand+Canyon+South+Rim+Visitor+Center" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 6:30 PM · 저녁</div>
+        <div class="tl-desc">햇반 <span class="pack-badge">🍱 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time">7:30 PM</div>
+        <div class="tl-desc">🌅 Grand Canyon Sunset</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">D</span>밤</div>
+        <div class="tl-desc">Yavapai Lodge 체크인</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">Yavapai Lodge</div>
+        <div class="hotel-detail">₩307,203 · Hotels.com · 현대카드 · Non-refundable</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Yavapai+Lodge+Grand+Canyon" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p2-1" onchange="saveCheck(this)">
+        <label for="p2-1">내일점심 도시락 5개 (or 내일 아침 준비 가능)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p2-2" onchange="saveCheck(this)">
+        <label for="p2-2">내일 엔텔롭 하이킹 가방: 어른 작은 가방에 물, 캔디</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p2-3" onchange="saveCheck(this)">
+        <label for="p2-3">🍱 내일 아침 햇반 챙겨두기</label>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- ==================== DAY 3 ==================== -->
+<div class="day-panel" data-day="3">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/Yavapai+Lodge+Grand+Canyon/Mather+Point+Grand+Canyon/Horseshoe+Bend+Page+AZ/Lower+Antelope+Canyon+Page+AZ/Walmart+Page+AZ/Carl+Hayden+Visitor+Center+Page+AZ/La+Quinta+Inn+Kanab+UT" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Yavapai → Mather Pt → Horseshoe → Antelope → 월마트 → Kanab</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-3" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">🌡️</div>
+    <div class="weather-text">
+      <div class="weather-temp">아침 추움 → Page 15-20°C → 엔텔롭 18-22°C</div>
+      <div class="weather-outfit">아침 패딩 / 낮 긴팔·반팔</div>
+      <div class="weather-warn">⚠️ 엔텔롭 갈 때 가방 NO — 물 넣은 작은 가방만</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 5:00 AM · 아침</div>
+        <div class="tl-desc">햇반 <span class="pack-badge">🍱 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>5:40 AM</div>
+        <div class="tl-desc">출발 (선라이즈)</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">B</span>6:10 AM</div>
+        <div class="tl-desc">🌅 Grand Canyon Sunrise</div>
+        <div class="tl-note">Yavapai Point · Mather Point</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Mather+Point+Grand+Canyon" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">8:00 AM</div>
+        <div class="tl-desc">출발 → Page 방면</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">C</span>오전</div>
+        <div class="tl-desc">Horseshoe Bend</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Horseshoe+Bend+Viewpoint+Page+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 12:00 PM · 점심</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 차에서</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">D</span>2:00 PM</div>
+        <div class="tl-desc">⭐ Lower Antelope Canyon</div>
+        <div class="tl-note">$402.5 · 예약 투어</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Lower+Antelope+Canyon+Page+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">E</span>오후</div>
+        <div class="tl-desc">월마트 쇼핑</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Walmart+Page+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">F</span>오후</div>
+        <div class="tl-desc">Wahweap Overlook / Carl Hayden Visitor Center</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Carl+Hayden+Visitor+Center+Page+AZ" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍽️ 6:00 PM · 저녁</div>
+        <div class="tl-desc">Escobar's Mexican Restaurant</div>
+        <div class="tl-note">영업 11AM-9PM</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Escobars+Mexican+Restaurant+Kanab+UT" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">G</span>저녁</div>
+        <div class="tl-desc">Kanab 숙소 도착</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">La Quinta Inn (Kanab) — 2박</div>
+        <div class="hotel-detail">$174.24 · Expedia · AMEX · 3/28까지 취소 가능</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=La+Quinta+Inn+Kanab+UT" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p3-1" onchange="saveCheck(this)">
+        <label for="p3-1">내일점심 도시락 5개 (밥 + 스팸)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p3-2" onchange="saveCheck(this)">
+        <label for="p3-2">내일 지온 하이킹 가방: 물, 야채, 과일, 캔디</label>
+      </div>
+    </div>
+  </details>
+
+  <div class="section">
+    <div class="section-head">🛒 월마트 쇼핑 목록</div>
+    <div class="shop">
+      <div class="shop-badge">월마트 · Page</div>
+      <ul>
+        <li>내일 저녁용 간편식: 치킨 or 볶음밥</li>
+        <li>빵, 계란?</li>
+        <li>빵 사이 끼어먹을 얇은 조리된 햄</li>
+        <li>야채</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAY 4 ==================== -->
+<div class="day-panel" data-day="4">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/La+Quinta+Inn+Kanab+UT/Zion+National+Park+Visitor+Center/La+Quinta+Inn+Kanab+UT" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Kanab → Zion NP → Kanab (왕복)</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-4" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">🌧️</div>
+    <div class="weather-text">
+      <div class="weather-temp">10 – 18°C · 소나기 가능</div>
+      <div class="weather-outfit">방수 자켓 + 여벌 옷 · 쌀쌀 습함</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 5:30 AM · 아침</div>
+        <div class="tl-desc">조식 (숙소)</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>6:00 AM</div>
+        <div class="tl-desc">출발</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">B</span>7:00 AM</div>
+        <div class="tl-desc">Zion National Park 하이킹</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Zion+National+Park+Visitor+Center" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 12:00 PM · 점심</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 하이킹 중</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">C</span>오후</div>
+        <div class="tl-desc">Kanab 복귀 · 수영장 물놀이?</div>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 6:30 PM · 저녁</div>
+        <div class="tl-desc">월마트 간편식 (치킨/볶음밥)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">La Quinta Inn (Kanab) — 2박째</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=La+Quinta+Inn+Kanab+UT" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p4-1" onchange="saveCheck(this)">
+        <label for="p4-1">내일아침 도시락 5개 (조식 먹으면 생략)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p4-2" onchange="saveCheck(this)">
+        <label for="p4-2">내일점심 도시락 5개</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p4-3" onchange="saveCheck(this)">
+        <label for="p4-3">내일 지온 하이킹 가방: 물, 야채, 과일, 캔디</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p4-4" onchange="saveCheck(this)">
+        <label for="p4-4">🍱 내일 저녁 햇반 챙겨두기</label>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- ==================== DAY 5 ==================== -->
+<div class="day-panel" data-day="5">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/La+Quinta+Inn+Kanab+UT/Kayenta+Trailhead+Zion+National+Park/Emerald+Pools+Trailhead+Zion/Canyon+Overlook+Trail+Zion/The+Golden+Spur+Hotel+Panguitch+UT" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Kanab → Kayenta → Emerald → Overlook → Panguitch</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-5" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">☀️</div>
+    <div class="weather-text">
+      <div class="weather-temp">12 – 21°C</div>
+      <div class="weather-outfit">반팔 + 얇은 겉옷</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 5:00 AM · 아침</div>
+        <div class="tl-desc">조식 or 도시락 (밥 + 스팸)</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>5:40 AM</div>
+        <div class="tl-desc">출발</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">B</span>7:00 AM</div>
+        <div class="tl-desc">Zion 하이킹</div>
+        <div class="tl-note">Kayenta Trail → Emerald Pools → Canyon Overlook Trail</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Kayenta+Trailhead+Zion+National+Park" target="_blank">📍 Kayenta</a>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Emerald+Pools+Trailhead+Zion" target="_blank">📍 Emerald</a>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Canyon+Overlook+Trail+Zion" target="_blank">📍 Overlook</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 12:00 PM · 점심</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 하이킹 중</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">오후</div>
+        <div class="tl-desc">(월마트 가능)</div>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 7:00 PM · 저녁</div>
+        <div class="tl-desc">햇반 <span class="pack-badge">🍱 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">C</span>저녁</div>
+        <div class="tl-desc">The Golden Spur Hotel (Panguitch) 도착</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=The+Golden+Spur+Hotel+Panguitch+UT" target="_blank">📍 네비</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">The Golden Spur Hotel (Panguitch)</div>
+        <div class="hotel-detail">$106.29 ($118.1 - $11.81 할인) · Expedia</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=The+Golden+Spur+Hotel+Panguitch+UT" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p5-1" onchange="saveCheck(this)">
+        <label for="p5-1">내일아침 도시락 5개 (간단 — 스크램블/빵)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p5-2" onchange="saveCheck(this)">
+        <label for="p5-2">보온병에 따듯한 물 준비 → 차에 두기</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p5-3" onchange="saveCheck(this)">
+        <label for="p5-3">내일 브라이스 하이킹 가방: 물, 캔디, 에너지바, 간식</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p5-4" onchange="saveCheck(this)">
+        <label for="p5-4">⚠️ 내일 여행 중 가장 추움! 패딩·장갑·귀덮이모자 꺼내기</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p5-5" onchange="saveCheck(this)">
+        <label for="p5-5">🍱 내일 저녁 햇반 (참치) 챙겨두기</label>
+      </div>
+    </div>
+  </details>
+
+  <div class="section">
+    <div class="section-head">🛒 쇼핑 (선택)</div>
+    <div class="shop">
+      <div class="shop-badge">월마트 · 충분하면 패스</div>
+      <ul>
+        <li>계란</li>
+        <li>빵</li>
+        <li>빵 사이 끼어먹을 조리된 햄</li>
+        <li>야채</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAY 6 ==================== -->
+<div class="day-panel" data-day="6">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/The+Golden+Spur+Hotel+Panguitch+UT/Sunrise+Point+Bryce+Canyon/Sunset+Point+Bryce+Canyon/Bryce+Point+Bryce+Canyon/Green+River+UT" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Panguitch → Sunrise Pt → Sunset Pt → Bryce Pt → Green River</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-6" class="day-map"></div>
+
+  <div class="weather cold">
+    <div class="weather-icon">🥶</div>
+    <div class="weather-text">
+      <div class="weather-temp" style="color:var(--danger)">⚠️ 여행 중 가장 추움! -4 ~ 10°C</div>
+      <div class="weather-outfit">패딩 + 장갑 + 귀덮이모자 + 바람막이</div>
+      <div class="weather-warn">아침 -4~0°C 강풍 / 낮에도 5-10°C 계속 추움</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 6:00 AM · 아침</div>
+        <div class="tl-desc">도시락 (스크램블에그/빵) — 차에서</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>6:30 AM</div>
+        <div class="tl-desc">출발</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">B</span>7:10 AM</div>
+        <div class="tl-desc">🌅 Bryce Canyon 일출 (Sunrise Point)</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Sunrise+Point+Bryce+Canyon" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">C</span>8-9 AM</div>
+        <div class="tl-desc">Sunset Point (Rim Trail) · Bryce Point</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Sunset+Point+Bryce+Canyon" target="_blank">📍 Sunset</a>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Bryce+Point+Bryce+Canyon" target="_blank">📍 Bryce Pt</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍽️ 10:00 AM · 점심</div>
+        <div class="tl-desc">Marinia's Country Café</div>
+        <div class="tl-note">영업 8AM-2PM</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Marinias+Country+Cafe+Panguitch+UT" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">D</span>오후</div>
+        <div class="tl-desc">4시간 드라이브 → Green River</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Green+River+UT" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 7:00 PM · 저녁</div>
+        <div class="tl-desc">햇반 (참치) <span class="pack-badge">🍱 미리 챙기기</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🏨</div>
+      <div class="hotel-info">
+        <div class="hotel-name">Green River 숙소</div>
+        <div class="hotel-detail">TBD</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Green+River+UT+hotel" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p6-1" onchange="saveCheck(this)">
+        <label for="p6-1">내일아침 도시락 5개 (밥 + 스팸)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p6-2" onchange="saveCheck(this)">
+        <label for="p6-2">내일점심 도시락 5개</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p6-3" onchange="saveCheck(this)">
+        <label for="p6-3">내일 아치스 하이킹 가방: 물, 야채, 과일, 캔디</label>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- ==================== DAY 7 ==================== -->
+<div class="day-panel" data-day="7">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/Green+River+UT/Arches+National+Park+Entrance/Delicate+Arch+Trailhead/The+Windows+Arches+National+Park/Monument+Valley+Tribal+Park/The+View+Hotel+Monument+Valley" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Green River → Arches → Delicate → Windows → Monument Valley</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-7" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">🌤️</div>
+    <div class="weather-text">
+      <div class="weather-temp">아치스 5-22°C / 모뉴먼트 밤 5-10°C</div>
+      <div class="weather-outfit">아침 시원 → 낮 따듯</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 4:00 AM · 아침</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 차에서</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">A</span>4:20 AM</div>
+        <div class="tl-desc">출발</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">B</span>5:10 AM</div>
+        <div class="tl-desc">Arches 도착</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Arches+National+Park+Entrance" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time">6:50 AM</div>
+        <div class="tl-desc">🌅 Arches 일출</div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">C</span>7:00 AM~</div>
+        <div class="tl-desc">하이킹 — Delicate Arch · Windows Section</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Delicate+Arch+Trailhead" target="_blank">📍 Delicate</a>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=The+Windows+Arches+National+Park" target="_blank">📍 Windows</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍽️ 11:00 AM · 점심</div>
+        <div class="tl-desc">Moab Canyon Pizza Co.</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Moab+Canyon+Pizza+Co+Moab+UT" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">오전</div>
+        <div class="tl-desc">(City Market 쇼핑 가능)</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=City+Market+Moab+UT" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item"><div class="tl-time">낮</div><div class="tl-desc">3시간 드라이브 → Monument Valley</div></div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">D</span>~1:30 PM</div>
+        <div class="tl-desc">⭐ Monument Valley Tribal Park</div>
+        <div class="tl-warn">⚠️ 1:30 PM 전 입장 필수 (겨울 시즌)</div>
+        <div class="tl-note">John Ford Point · Mittens View</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Monument+Valley+Tribal+Park+Visitor+Center" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 6:00 PM · 저녁</div>
+        <div class="tl-desc">햇반 or 시티마켓 간편식 <span class="pack-badge">🍱 햇반 시 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">E</span>일몰</div>
+        <div class="tl-desc">🌅 The View Hotel 선셋 & 별 감상</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">🏨 숙소</div>
+    <div class="hotel">
+      <div class="hotel-icon">🌟</div>
+      <div class="hotel-info">
+        <div class="hotel-name">The View Hotel</div>
+        <div class="hotel-detail">$238.86 · Monument Valley</div>
+      </div>
+      <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=The+View+Hotel+Monument+Valley" target="_blank">📍</a>
+    </div>
+  </div>
+
+  <details class="prep" open>
+    <summary><span class="arrow">▶</span>📋 오늘 저녁 준비 (내일용)</summary>
+    <div class="prep-list">
+      <div class="prep-item">
+        <div class="prep-badge">저녁 식후</div>
+        <input type="checkbox" id="p7-1" onchange="saveCheck(this)">
+        <label for="p7-1">내일점심 도시락 5개 (밥 + 스팸)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p7-2" onchange="saveCheck(this)">
+        <label for="p7-2">내일 그랜드캐년 하이킹 가방: 물, 야채, 과일, 캔디</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p7-3" onchange="saveCheck(this)">
+        <label for="p7-3">⚠️ 내일 알람: 5:20 AM (애리조나) / 6:20 AM (나바호 서머타임)</label>
+      </div>
+      <div class="prep-item">
+        <div class="prep-badge">취침 전</div>
+        <input type="checkbox" id="p7-4" onchange="saveCheck(this)">
+        <label for="p7-4">🍱 내일 아침 햇반 (or 간편식) 챙겨두기</label>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- ==================== DAY 8 ==================== -->
+<div class="day-panel" data-day="8">
+
+  <a class="route-btn" href="https://www.google.com/maps/dir/The+View+Hotel+Monument+Valley/Forrest+Gump+Point+Monument+Valley/Grand+Canyon+South+Rim/Phoenix+Sky+Harbor+Airport" target="_blank">
+    <div class="rb-icon">🗺️</div>
+    <div class="rb-text">
+      <div class="rb-title">오늘 루트 지도 보기</div>
+      <div class="rb-sub">Monument Valley → Forrest Gump Pt → Grand Canyon → PHX 공항</div>
+    </div>
+    <div class="rb-arrow">›</div>
+  </a>
+
+  <div id="map-8" class="day-map"></div>
+
+  <div class="weather">
+    <div class="weather-icon">🌤️</div>
+    <div class="weather-text">
+      <div class="weather-temp">모뉴먼트 5-10°C / 그랜드캐년 14°C</div>
+      <div class="weather-outfit">긴팔 + 얇은 외투</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 5:00 AM · 아침</div>
+        <div class="tl-desc">햇반 or 간편식 or 조식 <span class="pack-badge">🍱 햇반 시 미리 챙기기</span></div>
+      </div>
+      <div class="tl-item hl">
+        <div class="tl-time"><span class="tl-stop">A</span>5:20 AM</div>
+        <div class="tl-desc">🌅 Monument Valley 일출</div>
+        <div class="tl-note">애리조나 5:20 / 나바호 서머타임 6:20</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">B</span>7:30 AM</div>
+        <div class="tl-desc">Forrest Gump Point</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Forrest+Gump+Point+Monument+Valley" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">9:00 AM</div>
+        <div class="tl-desc">출발 → 그랜드캐년</div>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍚 12:00 PM · 점심</div>
+        <div class="tl-desc">도시락 (밥 + 스팸) — 차에서</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">C</span>오후</div>
+        <div class="tl-desc">Grand Canyon</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Grand+Canyon+South+Rim" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item meal-node">
+        <div class="tl-time meal-time">🍔 6:00 PM · 저녁</div>
+        <div class="tl-desc">In-N-Out Burger (PHX)</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=In-N-Out+Burger+near+Phoenix+Airport" target="_blank">📍 네비</a>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time"><span class="tl-stop">D</span>8:00 PM</div>
+        <div class="tl-desc">PHX 공항 → 비행</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Phoenix+Sky+Harbor+Airport" target="_blank">📍 네비</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAY 9 ==================== -->
+<div class="day-panel" data-day="9">
+
+  <div class="weather">
+    <div class="weather-icon">🏠</div>
+    <div class="weather-text">
+      <div class="weather-temp">집으로!</div>
+      <div class="weather-outfit">편한 옷</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">📍 오늘 타임라인</div>
+    <div class="tl">
+      <div class="tl-item"><div class="tl-time">오전</div><div class="tl-desc">CLT 도착</div></div>
+      <div class="tl-item">
+        <div class="tl-time">오후</div>
+        <div class="tl-desc">3시간 드라이브 → Home (Cary)</div>
+        <a class="nav-btn" href="https://www.google.com/maps/search/?api=1&query=Cary+NC" target="_blank">📍 네비</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end schedule -->
+
+<!-- ===== CHECKLIST ===== -->
+<div id="view-checklist" class="view">
+<div class="cl-wrap">
+  <div class="cl-cat">👕 의류</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-1" onchange="saveCheck(this)"><label for="c-1">경량패딩</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-2" onchange="saveCheck(this)"><label for="c-2">바람막이</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-3" onchange="saveCheck(this)"><label for="c-3">조끼</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-4" onchange="saveCheck(this)"><label for="c-4">내복</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-5" onchange="saveCheck(this)"><label for="c-5">반팔 · 긴팔</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-6" onchange="saveCheck(this)"><label for="c-6">수영복</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-7" onchange="saveCheck(this)"><label for="c-7">비니 · 모자 · 귀덮이모자</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-8" onchange="saveCheck(this)"><label for="c-8">햇빛막이</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-9" onchange="saveCheck(this)"><label for="c-9">양말 여러 켤레</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-10" onchange="saveCheck(this)"><label for="c-10">속옷</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-11" onchange="saveCheck(this)"><label for="c-11">슬리퍼 · 운동화</label></div>
+  </div>
+  <div class="cl-cat">🍚 식재료 · 양념</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-20" onchange="saveCheck(this)"><label for="c-20">스팸 8개</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-21" onchange="saveCheck(this)"><label for="c-21">라면 5개 + 라면스프 6개</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-22" onchange="saveCheck(this)"><label for="c-22">김 2개</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-23" onchange="saveCheck(this)"><label for="c-23">참기름 · 간장 · 고추장 (3회분)</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-24" onchange="saveCheck(this)"><label for="c-24">소금 · 소스 (계란용)</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-25" onchange="saveCheck(this)"><label for="c-25">캔디 · 껌</label></div>
+  </div>
+  <div class="cl-cat">🍳 주방용품</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-30" onchange="saveCheck(this)"><label for="c-30">전기포트</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-31" onchange="saveCheck(this)"><label for="c-31">보온병</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-32" onchange="saveCheck(this)"><label for="c-32">도시락통 5개</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-33" onchange="saveCheck(this)"><label for="c-33">전자렌지 가능 용기</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-34" onchange="saveCheck(this)"><label for="c-34">컵 · 그릇 · 수저 · 젓가락</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-35" onchange="saveCheck(this)"><label for="c-35">가위 · 칼 · 도마</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-36" onchange="saveCheck(this)"><label for="c-36">퐁퐁 · 수세미</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-37" onchange="saveCheck(this)"><label for="c-37">가벼운 보온가방</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-38" onchange="saveCheck(this)"><label for="c-38">덮개</label></div>
+  </div>
+  <div class="cl-cat">🧴 세면 · 위생</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-40" onchange="saveCheck(this)"><label for="c-40">썬크림 · 립밤</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-41" onchange="saveCheck(this)"><label for="c-41">로션 · 세안제</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-42" onchange="saveCheck(this)"><label for="c-42">한글손수건</label></div>
+  </div>
+  <div class="cl-cat">🔌 전자기기</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-50" onchange="saveCheck(this)"><label for="c-50">충전기 · 보조배터리</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-51" onchange="saveCheck(this)"><label for="c-51">카메라 · 삼각대 · 셀카봉</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-52" onchange="saveCheck(this)"><label for="c-52">헤드랜턴 · 손전등</label></div>
+  </div>
+  <div class="cl-cat">🥾 하이킹 · 야외</div>
+  <div class="cl-items">
+    <div class="cl-item"><input type="checkbox" id="c-60" onchange="saveCheck(this)"><label for="c-60">개인가방</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-61" onchange="saveCheck(this)"><label for="c-61">선글라스</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-62" onchange="saveCheck(this)"><label for="c-62">놀이용장갑 · 따듯한 장갑</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-63" onchange="saveCheck(this)"><label for="c-63">야광팔찌</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-64" onchange="saveCheck(this)"><label for="c-64">망원경</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-65" onchange="saveCheck(this)"><label for="c-65">안전벨트</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-66" onchange="saveCheck(this)"><label for="c-66">지도</label></div>
+    <div class="cl-item"><input type="checkbox" id="c-67" onchange="saveCheck(this)"><label for="c-67">햇빛가리개 (차량용)</label></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== COST ===== -->
+<div id="view-cost" class="view">
+<div class="cost-wrap">
+  <div class="cost-card">
+    <div class="cost-row"><div><div class="cost-name">✈️ 항공 (AA)</div><div class="cost-sub">CLT ↔ PHX</div></div><div class="cost-amount">$1,564.85</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 Cottonwood (3/28)</div><div class="cost-sub">AMEX · $100 크레딧 적용 · Non-refundable</div></div><div class="cost-amount">$96.48</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 Yavapai Lodge (3/29)</div><div class="cost-sub">현대카드 · Hotels.com · Non-refundable</div></div><div class="cost-amount">₩307,203</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 La Quinta 2박 (3/30-31)</div><div class="cost-sub">AMEX · Expedia · 3/28까지 취소 가능</div></div><div class="cost-amount">$174.24</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 The Golden Spur Hotel (4/1)</div><div class="cost-sub">Expedia · $118.1 - $11.81 할인</div></div><div class="cost-amount">$106.29</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 그린리버 (4/2)</div><div class="cost-sub">추가 예약</div></div><div class="cost-amount" style="color:var(--text3)">TBD</div></div>
+    <div class="cost-row"><div><div class="cost-name">🌟 The View Hotel (4/3)</div><div class="cost-sub">Monument Valley</div></div><div class="cost-amount">$238.86</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏜️ Antelope Canyon 투어</div><div class="cost-sub">3/30 2PM</div></div><div class="cost-amount">$402.50</div></div>
+    <div class="cost-row"><div><div class="cost-name">🏨 Yavapai Lodge (4/4?)</div></div><div class="cost-amount">₩392,104</div></div>
+    <div class="cost-row cost-total"><div><div class="cost-name">합계</div></div><div class="cost-amount">$2,583.22<br>+ ₩699,307<br>+ TBD (그린리버)</div></div>
+  </div>
+</div>
+</div>
+
+<script>
+function switchDay(d){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.day-panel').forEach(p=>p.classList.remove('active'));
+  const tab=document.querySelector(`.tab[data-day="${d}"]`);
+  const panel=document.querySelector(`.day-panel[data-day="${d}"]`);
+  if(tab)tab.classList.add('active');
+  if(panel)panel.classList.add('active');
+  tab?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchDay(t.dataset.day)));
+(function(){
+  const today=new Date().toISOString().slice(0,10);
+  let found=false;
+  document.querySelectorAll('.tab').forEach(t=>{if(t.dataset.date===today){switchDay(t.dataset.day);found=true;}});
+  if(!found)switchDay('1');
+})();
+function switchView(v,btn){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function saveCheck(el){
+  el.nextElementSibling.classList.toggle('done',el.checked);
+  localStorage.setItem('gc-'+el.id,el.checked);
+}
+document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+  if(localStorage.getItem('gc-'+cb.id)==='true'){cb.checked=true;cb.nextElementSibling.classList.add('done');}
+});
+
+// ===== MAP DATA =====
+const routes = {
+  1: [
+    {lat:33.4373,lng:-112.0078,label:'A',name:'PHX Airport',type:'spot'},
+    {lat:33.6165,lng:-111.8987,label:'B',name:'코스트코',type:'spot'},
+    {lat:34.8558,lng:-111.7842,label:'C',name:'Airport Mesa',type:'highlight'},
+    {lat:34.7390,lng:-112.0099,label:'D',name:'Cottonwood 숙소',type:'spot'}
+  ],
+  2: [
+    {lat:34.7390,lng:-112.0099,label:'A',name:'Cottonwood',type:'spot'},
+    {lat:34.8078,lng:-111.7631,label:'B',name:'Bell Rock',type:'spot'},
+    {lat:36.0544,lng:-112.1401,label:'C',name:'Grand Canyon',type:'highlight'},
+    {lat:36.0553,lng:-112.1164,label:'D',name:'Yavapai Lodge',type:'spot'}
+  ],
+  3: [
+    {lat:36.0553,lng:-112.1164,label:'A',name:'Yavapai Lodge',type:'spot'},
+    {lat:36.0610,lng:-112.1071,label:'B',name:'Mather Point 🌅',type:'highlight'},
+    {lat:36.8791,lng:-111.5104,label:'C',name:'Horseshoe Bend',type:'highlight'},
+    {lat:36.9024,lng:-111.4487,label:'D',name:'Antelope Canyon',type:'highlight'},
+    {lat:36.9147,lng:-111.4558,label:'E',name:'Walmart',type:'spot'},
+    {lat:36.9376,lng:-111.4843,label:'F',name:'Carl Hayden',type:'spot'},
+    {lat:37.0475,lng:-112.5263,label:'G',name:'La Quinta Kanab',type:'spot'}
+  ],
+  4: [
+    {lat:37.0475,lng:-112.5263,label:'A',name:'La Quinta Kanab',type:'spot'},
+    {lat:37.1990,lng:-112.9843,label:'B',name:'Zion NP',type:'highlight'},
+    {lat:37.0475,lng:-112.5263,label:'C',name:'Kanab 복귀',type:'spot'}
+  ],
+  5: [
+    {lat:37.0475,lng:-112.5263,label:'A',name:'Kanab',type:'spot'},
+    {lat:37.2505,lng:-112.9513,label:'B',name:'Zion 하이킹',type:'highlight'},
+    {lat:37.8243,lng:-112.4352,label:'C',name:'Golden Spur Hotel',type:'spot'}
+  ],
+  6: [
+    {lat:37.8243,lng:-112.4352,label:'A',name:'Golden Spur Hotel',type:'spot'},
+    {lat:37.6268,lng:-112.1636,label:'B',name:'Sunrise Point 🌅',type:'highlight'},
+    {lat:37.6231,lng:-112.1680,label:'C',name:'Sunset Point',type:'highlight'},
+    {lat:37.6160,lng:-112.1520,label:'D',name:'Bryce Point',type:'spot'},
+    {lat:38.9950,lng:-110.1590,label:'E',name:'Green River',type:'spot'}
+  ],
+  7: [
+    {lat:38.9950,lng:-110.1590,label:'A',name:'Green River',type:'spot'},
+    {lat:38.6165,lng:-109.6198,label:'B',name:'Arches 입구',type:'spot'},
+    {lat:38.7436,lng:-109.4993,label:'C',name:'Delicate Arch',type:'highlight'},
+    {lat:38.6827,lng:-109.5863,label:'D',name:'Windows Section',type:'spot'},
+    {lat:36.9983,lng:-110.0985,label:'E',name:'Monument Valley',type:'highlight'},
+    {lat:36.9832,lng:-110.1135,label:'F',name:'The View Hotel',type:'spot'}
+  ],
+  8: [
+    {lat:36.9832,lng:-110.1135,label:'A',name:'The View Hotel',type:'spot'},
+    {lat:37.1013,lng:-109.9907,label:'B',name:'Forrest Gump Pt',type:'spot'},
+    {lat:36.0544,lng:-112.1401,label:'C',name:'Grand Canyon',type:'spot'},
+    {lat:33.4373,lng:-112.0078,label:'D',name:'PHX Airport',type:'spot'}
+  ]
+};
+
+const maps = {};
+const colors = {spot:'#4f46e5',highlight:'#ef4444',meal:'#10b981'};
+
+function createMarker(point) {
+  const size = point.type === 'highlight' ? 32 : 28;
+  const bg = point.type === 'highlight' ? colors.highlight : colors.spot;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${bg};color:#fff;font-size:${size===32?'0.8':'0.72'}rem;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2.5px solid #fff">${point.label}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2]
+  });
+  return L.marker([point.lat, point.lng], {icon}).bindTooltip(point.name, {
+    permanent: false, direction: 'top', offset: [0, -size/2],
+    className: 'map-tooltip'
+  });
+}
+
+function initMap(day) {
+  if (maps[day]) { maps[day].invalidateSize(); return; }
+  const el = document.getElementById('map-' + day);
+  if (!el) return;
+  const pts = routes[day];
+  if (!pts) return;
+
+  const map = L.map(el, {zoomControl: true, scrollWheelZoom: false, attributionControl: true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 18
+  }).addTo(map);
+
+  const latlngs = pts.map(p => [p.lat, p.lng]);
+  L.polyline(latlngs, {color: '#4f46e5', weight: 3, opacity: 0.6, dashArray: '8 6'}).addTo(map);
+
+  pts.forEach(p => createMarker(p).addTo(map));
+  map.fitBounds(L.latLngBounds(latlngs).pad(0.15));
+  maps[day] = map;
+}
+
+// Init map when tab switches
+const origSwitchDay = switchDay;
+switchDay = function(d) {
+  origSwitchDay(d);
+  setTimeout(() => initMap(parseInt(d)), 100);
+};
+
+// Init first visible map
+setTimeout(() => {
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) initMap(parseInt(activeTab.dataset.day));
+}, 300);
+</script>
+</body>
+</html>
